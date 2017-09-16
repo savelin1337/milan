@@ -36,7 +36,7 @@
 //Описание констант
 
        /* Количество ключевых слов языка МИЛАН */
-       define("MAX_KEY_WORDS",11);
+       define("MAX_KEY_WORDS",16);
 
        /* Кода ключевых слов языка МИЛАН */
        define("_BEGIN_",    1);
@@ -50,11 +50,16 @@
        define("_READ_",        9);
        define("_THEN_",        10);
        define("_WHILE_",    11);
+       define("_REPEAT_",    12);
+       define("_UNTIL_",    13);	   	   
+       define("_SWITCH_",    14);
+       define("_CASE_",    15);	   
+       define("_DEFAULT_",    16);	   	   	   
 
        /* Кода лексем языка МИЛАН */
-       define("_SEMICOLON_",12); /* ; */
+       define("_SEMICOLON_",17); /* ; */
 
-       define("_RELATION_",13); // операция типа отношение
+       define("_RELATION_",18); // операция типа отношение
        /* значения операции типа отношение */
                  define("_EQUAL_",    0); /*   =     */
                  define("_NOTEQUAL_", 1); /*   <>     */
@@ -63,21 +68,26 @@
                  define("_GE_",       4); /*   >=   */
                  define("_LE_",       5); /*   <=   */
 
-       define("_SUMM_",    14); /* операция типа сложение  */
+       define("_SUMM_",    19); /* операция типа сложение  */
        /* значения операции типа сложение */
                 define("_PLUS_",     0); /*   +   */
                 define("_MINUS_",    1); /*   -   */
+                define("_INCR_",     2); /*   ++  */				
 
-       define("_MUL_",     15); /* операция типа умножение  */
+       define("_MUL_",     20); /* операция типа умножение  */
        /* значения операции типа сложение */
                define("_STAR_",    0); /*   *   */
                define("_SLASH_",   1); /*   /   */
 
-       define("_ASSIGNMENT_",        16);   /* присваивание  */
-       define("_LPAREN_",            17);   /*      (        */
-       define("_RPAREN_",            18);   /*      )        */
-       define("_IDENTIFIER_",        19);   /* идентификатор */
-       define("_CONSTANT_",            20);   /*   константа   */
+       define("_ASSIGNMENT_",        21);   /* присваивание  */
+       define("_LPAREN_",            22);   /*      (        */
+       define("_RPAREN_",            23);   /*      )        */
+       define("_IDENTIFIER_",        24);   /* идентификатор */
+       define("_CONSTANT_",          25);   /*   константа   */
+       define("_LBRACE_",            26);   /*      {        */
+       define("_RBRACE_",            27);   /*      }        */	
+	   define("_TWODOTS_",   	     28);   /*      :        */
+	   define("_BRCOM_",   	         29);   /*      { }      */	   
 
 
        /* Таблица ключевых [зарезервированных] слов языка МИЛАН     */
@@ -106,6 +116,11 @@
              $Table_Key_Words[9] = ct_AddElement('READ',    _READ_);
              $Table_Key_Words[10]= ct_AddElement('THEN',    _THEN_);
              $Table_Key_Words[11]= ct_AddElement('WHILE',    _WHILE_);
+             $Table_Key_Words[12]= ct_AddElement('REPEAT',    _REPEAT_);
+             $Table_Key_Words[13]= ct_AddElement('UNTIL',    _UNTIL_);
+             $Table_Key_Words[14]= ct_AddElement('SWITCH',    _SWITCH_);
+             $Table_Key_Words[15]= ct_AddElement('CASE',    _CASE_);		
+             $Table_Key_Words[16]= ct_AddElement('DEFAULT',    _DEFAULT_);					 	 			 			 			 
 
 
        /* максимально допустимое количество идентификаторов в программе */
@@ -151,7 +166,21 @@
        /*    30      */   'Деление на ноль.',
        /*    31      */   'Конструкция <множитель>. Нет закрывающей скобки.',
        /*    32      */   'Переполнение стека StekSum.',
-       /*    33      */   'Нехватка элементов в стеке StekSum.');
+       /*    33      */   'Нехватка элементов в стеке StekSum.',
+	   /*    34      */   'Неправильное построение оператора инкремент.',
+	   /*    35      */   'Переполнение стека REPEAT.',
+	   /*    36      */   'Нехватка элементов в стеке REPEAT.',
+       /*    37      */   'Несоответствие в операторах REPEAT-UNTIL. ',
+	   /*    38      */   'Переполнение стека SWITCH',
+	   /*    39      */   'Неправильное построение оператора SWITCH',
+	   /*    40      */   'Нехватка элементов в стеке SWITCH', 
+/*41*/ 'Отсутствует ключевое слово UNTIL',
+/*42*/ 'Отсутствует { в операторе SWITCH',
+/*43*/ 'Отсутствует } в операторе SWITCH',	
+/*44*/ 'Отсутствует DEFAULT в конструкции SWITCH',
+/*45*/ 'Отсутствует двоеточие после CASE',
+/*46*/ 'Отсутствует двоеточие после DEFAULT',
+/*47*/ 'Отсутствуют операторы после CASE');  
 
        /* массив лексем */
        $Tab_Lexems      = Array ();
@@ -195,6 +224,8 @@
 
        /* Номер очередной константы в программе */
        $Number_Constants        =    0;
+	   
+	   $Flag_Lexem = 0;
 
 
  /*************************************************************************/
@@ -338,7 +369,7 @@
   /************************************************************************/
   Function Isdigit($Figure)
   {
-    $ct_res=preg_match("/[0-9]/i", $Figure{0});
+    $ct_res=ereg("[0-9]", $Figure{0});
     return $ct_res;
   } /* End Isdigit */
 
@@ -349,7 +380,7 @@
   Function Isalpha($Letter)
   {
 
-   $ct_res=preg_match("/[A-Za-zА-Яа-я]/i", $Letter{0});
+   $ct_res=ereg("[A-Za-zА-Яа-я]", $Letter{0});
    return $ct_res;
   } /* End Isalpha */
 
@@ -381,22 +412,16 @@
   Function Found_in_Table_Key_Words($Word, &$Code)
   {
    global $Table_Key_Words;
-   $k=0;
-   $m=1;
+   $m=0;
    $n=MAX_KEY_WORDS;
-   while ($m<=$n):
-    $k=intval($m+($n-$m) / 2);                                 
-    if ($Word==$Table_Key_Words[$k]->Key_Word)
+   while ($m<=$n):                                
+    if ($Word==$Table_Key_Words[$m]->Key_Word)
     {
-     $Code=$Table_Key_Words[$k]->Code_Key_Word;
+     $Code=$Table_Key_Words[$m]->Code_Key_Word;
      return TRUE;
     }
-    elseif ($Word>$Table_Key_Words[$k]->Key_Word)
-    {
-      $m=$k+1;
-    }
-     else
-      $n=$k-1;
+	else
+	   $m++;
    endwhile;
    return FALSE;
   }
@@ -542,7 +567,7 @@
     {
 
      /* функция у11: формирование лексемы */
-     $Current_Lexem->Code    =    19;
+     $Current_Lexem->Code    =    24;
      $Current_Lexem->Value   =    Found_in_Table_Identifiers($Word);
 
     }
@@ -554,7 +579,7 @@
       $Tab_Identifiers[$Number_Identifiers]=$Word;
 
       /* функция у11: формирование лексемы */
-      $Current_Lexem->Code=19;
+      $Current_Lexem->Code=24;
       $Current_Lexem->Value=$Number_Identifiers;
 
      }
@@ -634,7 +659,7 @@
    if (Found_in_Table_Constants($Word)>0)
    {
     /* функция у11: формирование лексемы */
-    $Current_Lexem->Code=20;
+    $Current_Lexem->Code=25;
     $Current_Lexem->Value=Found_in_Table_Constants($Word);
    }
    elseif ($Number_Constants<MAX_CONSTANTS)
@@ -645,7 +670,7 @@
       $Tab_Constants[$Number_Constants]=$Constant_Value;
 
       /* функция у11: формирование лексемы */
-      $Current_Lexem->Code=20;
+      $Current_Lexem->Code=25;
       $Current_Lexem->Value=$Number_Constants;
 
      }
@@ -660,15 +685,16 @@
     return 0;
   } /* End Digit */
 
-  /************************************************************************/
-  /* Setup_Refference                                                     */
-  /* Процедура расстановки ссылок:                                        */
-  /*                               DO-->ENDDO+1, ENDDO-->WHILE+1          */
-  /*                               THEN-->ELSE+1                          */
-  /*                               THEN-->ENDIF+1, ELSE-->ENDIF+1         */
-  /* Аргументы: Массив лексем.                                            */
-  /* Результат: Массив лексем с расставленными ссылками.                  */
-  /************************************************************************/
+  /****************************************************************************/
+  /* Setup_Refference                                                         */
+  /* Процедура расстановки ссылок:                                            */
+  /*                               DO-->ENDDO+1, ENDDO-->WHILE+1              */
+  /*                               THEN-->ELSE+1                              */
+  /*                               THEN-->ENDIF+1, ELSE-->ENDIF+1             */
+  /*                               REPEAT--><условие>+1, <условие>-->REPEAT+1 */
+  /* Аргументы: Массив лексем.                                                */
+  /* Результат: Массив лексем с расставленными ссылками.                      */
+  /****************************************************************************/
   function Setup_Refference()
   {
      /* функция y0: подготовка (инициализация стеков и переменных),         */
@@ -682,19 +708,304 @@
     //Локальные переменные
     $r=0;
     $s=0;
+	$p=0;
+	$q=0;
+	$w=0;
+	$f=0;
+	$l=0;
+	$m=0;
+	$t=0;
+	$z=0;
     $Top_do  = 0;
     $Top_if  = 0;
+	$Top_rep = 0;
+	$Top_swi  = 0;
     $Stek_if = Array();
     $Stek_do = Array();
+    $Stek_rep= Array();
+    $Stek_sw = Array();		
 
     $Number_Lexem = 1;
     Stek_Integer(0,$Stek_do,$Top_do,$r);
     Stek_Integer(0,$Stek_if,$Top_if,$s);
+    Stek_Integer(0,$Stek_rep,$Top_rep,$m);
+    Stek_Integer(0,$Stek_sw,$Top_swi,$f);			
 
     do
     {
      switch($Tab_Lexems[$Number_Lexem]->Code):
+	 		  Case _SWITCH_ :
+			  				
+							 if (!Stek_Integer(2,$Stek_sw,$Top_sw,$Number_Lexem))
+                             	{
+                              	 /* Переполнение стека SWITCH*/
+                              	 $Code_Error=37;
+                             	 return 0;
+                             	}
+							if(!Stek_Integer(1,$Stek_sw,$Top_sw,$f))
+									{
+									 //Нехватка элементов в стеке SWITCH
+                              		 $Code_Error=39;
+                                     return 0;									 
+									}										
 
+			  				break;				
+
+			  Case _CASE_:
+			  		  	  
+							 if (!Stek_Integer(2,$Stek_sw,$Top_sw,$Number_Lexem))
+                             	{
+                              	 /* Переполнение стека SWITCH*/
+                              	 $Code_Error=37;
+                             	 return 0;
+                             	}
+								
+							if(!Stek_Integer(1,$Stek_sw,$Top_sw,$q))
+									{
+									 //Нехватка элементов в стеке SWITCH
+                              		 $Code_Error=39;
+                                     return 0;									 
+									}					  
+							
+								
+							 /* функция y7: $Number_Lexem++, */
+                             /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             $Number_Lexem++;	
+								
+							 
+							 while($Tab_Lexems[$Number_Lexem+1]->Code!=_DEFAULT_ && $Tab_Lexems[$Number_Lexem+1]->Code!=_RBRACE_ && $Tab_Lexems[$Number_Lexem+1]->Code!=_CASE_)
+									{
+							 		 /* функция y7: $Number_Lexem++, */
+                             		 /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             		 $Number_Lexem++;
+									  
+									
+							 									
+									 if ($Number_Lexem+1>$Number_Lexems_Programm)
+                             			{
+                             		 	 /* ошибка в построении оператора SWITCH*/
+                             			 $Code_Error=38;
+                             			 return 0;
+                             			}
+									}
+									
+								if($Tab_Lexems[$Number_Lexem+1]->Code==_RBRACE_)
+									 	{		  
+			  
+							 		 	if (!Stek_Integer(2,$Stek_sw,$Top_sw,$Number_Lexem))
+                             				{
+                              				 /* Переполнение стека SWITCH*/
+                              				 $Code_Error=37;
+                             				 return 0;
+                             				}
+								
+										if(!Stek_Integer(1,$Stek_sw,$Top_sw,$w))
+											{
+											 //Нехватка элементов в стеке SWITCH
+                              				 $Code_Error=39;
+                                    		 return 0;									 
+											}
+									     /* CASE-->}*/
+                           				 $Tab_Lexems[$q]->Value=$w+1;											
+										}
+										
+							  if($Tab_Lexems[$Number_Lexem+1]->Code==_CASE_)
+									 	{
+							 		 	if (!Stek_Integer(2,$Stek_sw,$Top_sw,$Number_Lexem))
+                             				{
+                              				 /* Переполнение стека SWITCH*/
+                              				 $Code_Error=37;
+                             				 return 0;
+                             				}
+								
+										if(!Stek_Integer(1,$Stek_sw,$Top_sw,$w))
+											{
+											 //Нехватка элементов в стеке SWITCH
+                              				 $Code_Error=39;
+                                    		 return 0;									 
+											}
+									     /* CASE1->CASE2*/
+                           				 $Tab_Lexems[$q]->Value=$w+1;											
+										}	
+								if($Tab_Lexems[$Number_Lexem+1]->Code==_DEFAULT_)
+									 	{		  
+			  
+							 		 	if (!Stek_Integer(2,$Stek_sw,$Top_sw,$Number_Lexem))
+                             				{
+                              				 /* Переполнение стека SWITCH*/
+                              				 $Code_Error=37;
+                             				 return 0;
+                             				}
+								
+										if(!Stek_Integer(1,$Stek_sw,$Top_sw,$w))
+											{
+											 //Нехватка элементов в стеке SWITCH
+                              				 $Code_Error=39;
+                                    		 return 0;									 
+											}
+									     /* CASE-->DEFAULT*/
+                           				 $Tab_Lexems[$q]->Value=$w+1;											
+										}
+									$Number_Lexem=$q+1;																																																					
+																									
+							break;	
+							
+			  Case _DEFAULT_:
+			  			
+							 if (!Stek_Integer(2,$Stek_sw,$Top_sw,$Number_Lexem))
+                             	{
+                              	 /* Переполнение стека SWITCH*/
+                              	 $Code_Error=37;
+                             	 return 0;
+                             	}
+								
+							if(!Stek_Integer(1,$Stek_sw,$Top_sw,$r))
+									{
+									 //Нехватка элементов в стеке SWITCH
+                              		 $Code_Error=39;
+                                     return 0;									 
+									}															  
+			  
+                             /* функция y7: Number_Lexem=Number_Lexem+1, 
+                              прочитать очередную лексему с номером  $Number_Lexem */
+                             $Number_Lexem++;
+							 
+							if ($Tab_Lexems[$Number_Lexem]->Code!=_TWODOTS_)
+									{
+								     /* ошибка в построении оператора SWITCH*/
+                              		 $Code_Error=45;
+                                     return 0;
+									}		
+									
+                             /* функция y7: Number_Lexem=Number_Lexem+1, 
+                              прочитать очередную лексему с номером  $Number_Lexem */
+                             $Number_Lexem++;														 
+							 
+							if ($Tab_Lexems[$Number_Lexem]->Code==_RBRACE_)
+									{
+								     /* ошибка в построении оператора SWITCH*/
+                              		 $Code_Error=38;
+                                     return 0;
+									}
+									
+							 while($Tab_Lexems[$Number_Lexem]->Code!=_RBRACE_)
+									{
+							 		 /* функция y7: $Number_Lexem++, */
+                             		 /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             		 $Number_Lexem++;
+							 									
+									 if ($Number_Lexem>$Number_Lexems_Programm)
+                             			{
+                             		 	 /* ошибка в построении оператора SWITCH*/
+                             			 $Code_Error=38;
+                             			 return 0;
+                             			}
+									}
+									
+							 if (!Stek_Integer(2,$Stek_sw,$Top_sw,$Number_Lexem))
+                             		{
+                              		 /* Переполнение стека SWITCH*/
+                              		 $Code_Error=37;
+                             		 return 0;
+                             		}
+								
+							 if(!Stek_Integer(1,$Stek_sw,$Top_sw,$w))
+									{
+									 //Нехватка элементов в стеке SWITCH
+                              		 $Code_Error=39;
+                                     return 0;									 
+									}
+							 /* DEFAULT->}+1*/
+							 $Tab_Lexems[$r]->Value=$w+1;
+							 
+							 /* SWITCH->}+1*/
+							 $Tab_Lexems[$f]->Value=$w+1;							 
+							 
+							 /*CASE-> DEFAULT*/
+                           	 $Tab_Lexems[$q]->Value=$r;	
+						    
+																																							
+							break;			 	 
+				  									 
+
+			  Case _REPEAT_:
+							
+                            /* функция y8: значение $Number_Lexem занести */
+                            /* стек $Stek_rep ($Number_Lexem-->$Stek_rep)     */
+                            if (!Stek_Integer(2,$Stek_rep,$Top_rep,$Number_Lexem))
+                             	{
+                              	/* Переполнение стека REPEAT*/
+                             	 $Code_Error=34;
+                             	 return 0;
+                             	}	
+
+
+										
+							break;
+							
+		Case _UNTIL_:
+                            if (!Stek_Integer(1,$Stek_rep,$Top_rep,$l))
+                             {
+                              /* Нехватка элементов в стеке REPEAT*/
+                              $Code_Error=35;
+                              return 0;
+                             }
+							 
+                            if (!Stek_Integer(2,$Stek_rep,$Top_rep,$Number_Lexem))
+                             	{
+                              	/* Переполнение стека REPEAT*/
+                             	 $Code_Error=34;
+                             	 return 0;
+                             	}
+                            if (!Stek_Integer(1,$Stek_rep,$Top_rep,$p))
+                             {
+                              /* Нехватка элементов в стеке REPEAT*/
+                              $Code_Error=35;
+                              return 0;
+                             }									
+							 
+                            /* функция y7: $Number_Lexem++, */
+                            /* прочитать очередную лексему с номером  $Number_Lexem */  
+                            $Number_Lexem++;
+
+                             while ($Tab_Lexems[$Number_Lexem]->Code!=_SEMICOLON_ && $Tab_Lexems[$Number_Lexem]->Code!=_END_):
+
+                             /* функция y7: Number_Lexem=Number_Lexem+1, 
+                              прочитать очередную лексему с номером  $Number_Lexem */
+                             $Number_Lexem++;
+
+                             if ($Number_Lexem>$Number_Lexems_Programm)
+                             {
+                              /* Несоответствие в операторах REPEAT-UNTIL */
+                              $Code_Error=36;
+                              return 0;
+                             }
+
+                            endwhile;
+                             /* функция y8: значение $Number_Lexem занести */
+                             /* стек $Stek_rep ($Number_Lexem-->$Stek_rep)     */
+                             if (!Stek_Integer(2,$Stek_rep,$Top_rep,$Number_Lexem))
+                             {
+                              /* Переполнение стека REPEAT */
+                              $Code_Error=34;
+							  }
+                            if (!Stek_Integer(1,$Stek_rep,$Top_rep,$m))
+                             	{
+                              	/* Нехватка элементов в стеке REPEAT*/
+                             	 $Code_Error=35;
+                             	 return 0;
+                             	}
+								
+                            /* REPEAT--><условие>+1*/
+                            $Tab_Lexems[$l]->Value=$m;								
+								
+						    /* UNTIL->REPEAT+1*/
+                            $Tab_Lexems[$p]->Value=$l+1;			
+															  
+                              return 0;
+                             
+
+				break;							
 
               Case   _WHILE_ :
 
@@ -862,6 +1173,18 @@
      /* Несоответствие в операторах WHILE-DO-OD */
      $Code_Error=10;
     }
+	if ($Top_rep!=0)
+                             {
+                              /* Несоответствие в операторах REPEAT-UNTIL */
+                              $Code_Error=36;
+                           
+                             }
+	if ($Top_swi!=0)
+                             {
+                              /* Несоответствие в операторах REPEAT-UNTIL */
+                              $Code_Error=38;
+                           
+                             }							 
    } /* End Setup_Refference */
 
   /************************************************************************/
@@ -982,12 +1305,12 @@
   }
   $Position=0;
   $Number_String=1;
-  $ct_spec= '/['.Chr(9). Chr(10).Chr(13). Chr(32).']/i';
+  $ct_spec= '['.Chr(9). Chr(10).Chr(13). Chr(32).']';
 
   do
   {
    /* Игнорирование спец. символов и пробела */
-   while (preg_match($ct_spec,$Input_Letter{0}) )
+   while (ereg($ct_spec,$Input_Letter{0}) )
    {
     switch (ord($Input_Letter{0})):
 
@@ -1024,7 +1347,7 @@
 
     Case ';'          :
                             /* функция у11: формирование лексемы */
-                            $Current_Lexem->Code=12;
+                            $Current_Lexem->Code=17;
                             $Current_Lexem->Value=0;
 
                             /* функция у1: чтение следующего символа */
@@ -1035,7 +1358,7 @@
 
     Case '='         :
                               /* функция у11: формирование лексемы */
-                            $Current_Lexem->Code=13;
+                            $Current_Lexem->Code=18;
                             $Current_Lexem->Value=0;
 
                             /* функция у1: чтение следующего символа */
@@ -1053,7 +1376,7 @@
                             {
 
                              /* функция у11: формирование лексемы */
-                             $Current_Lexem->Code=13;
+                             $Current_Lexem->Code=18;
                              $Current_Lexem->Value=4;
 
                              /* функция у1: чтение следующего символа */
@@ -1065,7 +1388,7 @@
                             {
 
                              /* функция у11: формирование лексемы */
-                             $Current_Lexem->Code=13;
+                             $Current_Lexem->Code=18;
                              $Current_Lexem->Value=2;
 
                             }
@@ -1080,7 +1403,7 @@
                             case '>'   :
 
                                       /* функция у11: формирование лексемы */
-                                      $Current_Lexem->Code=13;
+                                      $Current_Lexem->Code=18;
                                       $Current_Lexem->Value=1;
 
                                       /* функция у1: чтение следующего символа */
@@ -1092,7 +1415,7 @@
                             case  '=' :
 
                                       /* функция у11: формирование лексемы */
-                                      $Current_Lexem->Code=13;
+                                      $Current_Lexem->Code=18;
                                       $Current_Lexem->Value=5;
 
                                       /* функция у1: чтение следующего символа */
@@ -1103,27 +1426,42 @@
                             default:
 
                                       /* функция у11: формирование лексемы */
-                                      $Current_Lexem->Code=13;
+                                      $Current_Lexem->Code=18;
                                       $Current_Lexem->Value=3;
                                       break; 
                            endswitch;
                            break;
-    Case '+'          :
+    Case '+'          :    /* функция у1: чтение следующего символа */
+                			Read($Input_Letter);
+                            $Position++; 
+							                           
+							switch ($Input_Letter):
+                            	case '+'   :
 
-                            /* функция у11: формирование лексемы */
-                            $Current_Lexem->Code=14;
-                            $Current_Lexem->Value=0;
+                                      /* функция у11: формирование лексемы */
+                                      $Current_Lexem->Code=19;
+                                      $Current_Lexem->Value=2;
+									  /* функция у1: чтение следующего символа */
+                					   Read($Input_Letter);
+                            		  $Position=$Position+1; 
 
-                            /* функция у1: чтение следующего символа */
-                            Read($Input_Letter);
-                            $Position++;
+                                      break;
 
+								default:
+								
+                            		   /* функция у11: формирование лексемы */
+                            			$Current_Lexem->Code=19;
+                            			$Current_Lexem->Value=0;
+										
+										break;
+										
+								endswitch;		
                            break;
 
     Case '-'          :
 
                             /* функция у11: формирование лексемы */
-                            $Current_Lexem->Code=14;
+                            $Current_Lexem->Code=19;
                             $Current_Lexem->Value=1;
 
                             /* функция у1: чтение следующего символа */
@@ -1135,7 +1473,7 @@
     Case '*'          :
 
                             /* функция у11: формирование лексемы */
-                            $Current_Lexem->Code=15;
+                            $Current_Lexem->Code=20;
                             $Current_Lexem->Value=0;
 
                             /* функция у1: чтение следующего символа */
@@ -1144,20 +1482,43 @@
 
                            break;
 
-    Case '/'          :
+    Case '/'          : Read($Input_Letter);
+                             $Position++;
 
-                            /* функция у11: формирование лексемы */
+
+
+	if($Input_Letter{0}=='*')
+							 {
+							  do {
+								  $Position++;
+	                            						  Read($Input_Letter);
+								  if ($Input_Letter{0}==chr(26))
+								    {
+									 $Code_Error=33;
+									 break;
+									}
+								  }
+							   while($Input_Letter{0}!='*');
+
+							   $Position++;
+	                        					   Read($Input_Letter);
+							   if ($Input_Letter{0}!='/')
+							        $Code_Error=33;
+                               						else $Flag_Lexem=1;
+
+                               						$Position++;
+	                         					  Read($Input_Letter);
+							   break;
+							 }
+		else
+                           
                             $Current_Lexem->Code=15;
                             $Current_Lexem->Value=1;
-
-                            /* функция у1: чтение следующего символа */
-                            Read($Input_Letter);
-                             $Position++;
+	         
 
                            break;
 
     Case ':'          :
-
                             /* функция у1: чтение следующего символа */
                             Read($Input_Letter);
                             $Position++;
@@ -1166,7 +1527,7 @@
                              {
 
                               /* функция у11: формирование лексемы */
-                              $Current_Lexem->Code=16;
+                              $Current_Lexem->Code=21;
                               $Current_Lexem->Value=0;
 
                               /* функция у1: чтение следующего символа */
@@ -1175,14 +1536,21 @@
 
                              }
                             else
-                             /* Неопознанный символ в программе */
-                             $Code_Error=0;
+								{
+                                /* функция у11: формирование лексемы */								
+                             	 $Current_Lexem->Code=28;
+                             	 $Current_Lexem->Value=0;								
+								 
+								 /* функция у1: чтение следующего символа */
+                                 Read($Input_Letter);
+                                 $Position++;
+								} 
                            break;
 
     Case '('          :
 
                             /* функция у11: формирование лексемы */
-                            $Current_Lexem->Code=17;
+                            $Current_Lexem->Code=22;
                             $Current_Lexem->Value=0;
 
                             /* функция у1: чтение следующего символа */
@@ -1194,7 +1562,7 @@
     Case ')'          :
 
                             /* функция у11: формирование лексемы */
-                            $Current_Lexem->Code=18;
+                            $Current_Lexem->Code=23;
                             $Current_Lexem->Value=0;
 
                             /* функция у1: чтение следующего символа */
@@ -1202,6 +1570,58 @@
                             $Position++;
 
                             break;
+							
+    Case '{'          :
+	
+	                            /* функция у1: чтение следующего символа */
+                            	Read($Input_Letter);
+                            	$Position++;
+								
+								switch ($Input_Letter):
+                            	case ' '   :
+											while($Input_Letter!='}')
+												{/* функция у1: чтение следующего символа */
+                					             Read($Input_Letter);
+                            		             $Position=$Position+1; 
+												}
+												
+                					             Read($Input_Letter);
+                            		             $Position=$Position+1;												
+
+                                      /* функция у11: формирование лексемы */
+                                      $Current_Lexem->Code=29;
+                                      $Current_Lexem->Value=0;
+									  
+                					  Read($Input_Letter);
+                            		  $Position=$Position+1;									  
+
+
+                                      break;
+
+								default:
+								
+                            /* функция у11: формирование лексемы */
+                            $Current_Lexem->Code=26;
+                            $Current_Lexem->Value=0;
+										
+										break;
+										
+								endswitch;	
+
+
+                           break;
+						   
+    Case '}'          :
+
+                            /* функция у11: формирование лексемы */
+                            $Current_Lexem->Code=27;
+                            $Current_Lexem->Value=0;
+
+                            /* функция у1: чтение следующего символа */
+                            Read($Input_Letter);
+                            $Position++;
+
+                           break;						   							
 
                            /* Признак конца программы */
     Case  Chr(26)     :
@@ -1224,9 +1644,13 @@
     return 0;
    }
    /* функция у9: запись сформированной лексемы в массив лексем */
+   if ($Flag_Lexem == 0)
+   {
    $Number_Lexem++;
    $Tab_Lexems[$Number_Lexem]->Code=$Current_Lexem->Code;
    $Tab_Lexems[$Number_Lexem]->Value=$Current_Lexem->Value;
+   }
+   $Flag_Lexem = 0;
  }while (TRUE);
 }
 
@@ -1267,10 +1691,10 @@
       $Bi=0;           
  Function Syntactical_Analyzer()
  {
- /*************************************************************************/
- /* Процедура ProcedureP - обработка конструкции <множитель>              */
- /* <множитель>::=<идентификатор>|<константа>|READ|(<выражение>)          */
- /*************************************************************************/
+ /*************************************************************************************************/
+ /* Процедура ProcedureP - обработка конструкции <множитель>                                      */
+ /* <множитель>::=<идентификатор>|<константа>|READ|(<выражение>)|++<идентификатор>|<идентикатор>++*/
+ /*************************************************************************************************/
   Function ProcedureP()
  {
   global $Tab_Lexems;
@@ -1282,8 +1706,11 @@
   global $Code_Error;
   $NomIdent     =0;
   $Cifra        =0;
+  $res          =0;
+  $ires         =0;
 
   switch ($Tab_Lexems[$Number_Lexem]->Code):
+
      Case _IDENTIFIER_ :
                    /*  y1: занесение в стек StekRes идентификатора  $Tab_Lexems[$Number_Lexem]->Value */ 
                    
@@ -1294,12 +1721,108 @@
                     $Code_Error=26;
                     return 0;
                    }
-
+					$ires=$NomIdent;
+					$res=$ArrIdent[$NomIdent];	
+                    /* y13:добавить значение лексемы с номером $Number_Lexem */
+                    /* в стек $StekIdent ($Tab_Lexems[$Number_Lexem]->Value-->$StekIdent)*/                                       
+                    if (!Stek_Integer(2, $StekIdent, $TopIdent,$Tab_Lexems[$Number_Lexem]->Value))
+                    {
+                     /* Переполнение стека $StekIdent */
+                     $Code_Error=14;
+                     Exit;
+                    }	
                    /* функция y4: чтение следующей лексемы ($Number_Lexem++)*/
-                   $Number_Lexem++;
+                   $Number_Lexem++;			
+					
+					if ($Tab_Lexems[$Number_Lexem]->Code==19 && $Tab_Lexems[$Number_Lexem]->Value==2)
+						{ $res=$res+1;
+                    	 if (!Stek_Integer(2, $StekRes, $TopRes,$res))
+                    		{
+                     		 /* Переполнение стека $StekRes */
+                     		 $Code_Error=26;
+                    		 return 0;
+                    		}
+													
+                   		if (!Stek_Integer(1, $StekRes, $TopRes,$res))
+                    		{
+                     		 /* Нехватка элементов в стеке $StekRes */
+                    		 $Code_Error=16;
+                    		 return 0;
+                   			}
+                    	if (!Stek_Integer(1, $StekIdent, $TopIdent, $ires))
+                    		{
+                    		 /* Нехватка элементов в стеке $StekIdent */
+                    		 $Code_Error=17;
+                    		 return 0;
+                    		}							
+						 $ArrIdent[$ires]=$res;	
+						          /* функция y4: чтение следующей лексемы ($Number_Lexem++)*/
+                          $Number_Lexem++;				   				 	
+						}
 
                    return 0;
                    break;
+     Case _SUMM_:
+	 				
+					if($Tab_Lexems[$Number_Lexem]->Value==2)
+						{/* функция y4: чтение следующей лексемы ($Number_Lexem++)*/
+                         $Number_Lexem++;		
+						 if ($Tab_Lexems[$Number_Lexem]->Code==_IDENTIFIER_)
+						 	{$NomIdent=$Tab_Lexems[$Number_Lexem]->Value;
+							 $ires=$Tab_Lexems[$Number_Lexem]->Value;
+							 $res=$ArrIdent[$ires];
+                   			 if (!Stek_Integer(2, $StekRes, $TopRes, $ArrIdent[$NomIdent]))
+                   				{
+                   				 /* Переполнение стека $StekRes */
+                   				 $Code_Error=26;
+                   				 return 0;
+                   			    }
+							if (!Stek_Integer(2, $StekIdent, $TopIdent,$Tab_Lexems[$Number_Lexem]->Value))
+                    			{
+                    			 /* Переполнение стека $StekIdent */
+                    			 $Code_Error=14;
+                    			 Exit;
+                    			}
+
+						 
+							 $res=$res+1;
+						 
+                    	 	 if (!Stek_Integer(2, $StekRes, $TopRes,$res))
+                    			{
+                     			 /* Переполнение стека $StekRes */
+                     			 $Code_Error=26;
+                    			 return 0;
+                    			}
+													
+                   			if (!Stek_Integer(1, $StekRes, $TopRes,$res))
+                    			{
+                     			 /* Нехватка элементов в стеке $StekRes */
+                    		 	 $Code_Error=16;
+                    			 return 0;
+                   				}
+                    		 if (!Stek_Integer(1, $StekIdent, $TopIdent, $ires))
+                    			{
+                    			 /* Нехватка элементов в стеке $StekIdent */
+                    			 $Code_Error=17;
+                    			 return 0;
+                    			}							
+						 	$ArrIdent[$ires]=$res;						 					 							 
+							}
+						 else
+							{/*ошибка построения операции инкремент*/
+							 $Code_Error=33;
+							 return 0;
+							}					 	
+						}
+					else
+						{/*ошибка построения операции инкремент*/
+						 $Code_Error=33;
+						 return 0;
+						}
+					                   /* функция y4: чтение следующей лексемы ($Number_Lexem++)*/
+                   $Number_Lexem++;								
+	 				return 0;
+					break;				   
      Case _CONSTANT_ :
 
                    $NomIdent=$Tab_Lexems[$Number_Lexem]->Value;
@@ -1806,13 +2329,78 @@
   global $ArrIdent;
   global $Ai;
   global $Bi;
-
+  $res=0;
+  $ires=0;
+  $cvalrep=0;
+  $cvalunt=0;
+  $cvalsw=0; 
+  $cvalcase=0;   
   switch ($Tab_Lexems[$Number_Lexem]->Code):
 
-   /* Обработка оператора присваивания */
-   /* <идентификатор>:=<выражение>     */
-   case _IDENTIFIER_ :
+   case _SUMM_:
+   				if ($Tab_Lexems[$Number_Lexem]->Value==2)
+					{
+                     /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
+                     $Number_Lexem++;					 
+					 if ($Tab_Lexems[$Number_Lexem]->Code==_IDENTIFIER_)
+					 	{
+                    	 if (!Stek_Integer(2, $StekIdent, $TopIdent,$Tab_Lexems[$Number_Lexem]->Value))
+                    		{
+                    		 /* Переполнение стека $StekIdent */
+                    		 $Code_Error=14;
+                    		 Exit;
+                    		}
+						 $Bi=$Tab_Lexems[$Number_Lexem]->Value;
+						 $Ai=$ArrIdent[$Bi];
+						 
+						 $Ai++;
+						 
+                    	 if (!Stek_Integer(2, $StekRes, $TopRes,$Ai))
+                    		{
+                     		 /* Переполнение стека $StekRes */
+                     		 $Code_Error=26;
+                    		 return 0;
+                    		}
+													
+                   		if (!Stek_Integer(1, $StekRes, $TopRes,$Ai))
+                    		{
+                     		 /* Нехватка элементов в стеке $StekRes */
+                    		 $Code_Error=16;
+                    		 return 0;
+                   			}
+                    	if (!Stek_Integer(1, $StekIdent, $TopIdent, $Bi))
+                    		{
+                    		 /* Нехватка элементов в стеке $StekIdent */
+                    		 $Code_Error=17;
+                    		 return 0;
+                    		}							
+						 $ArrIdent[$Bi]=$Ai;
+						 
+						 
+                     		 /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
+                     		 $Number_Lexem++;						 
+						 							 
+						}
+					 else
+						{/*Неправильное построение оператора инкремент*/
+						 $Code_Error=33;
+						 return 0;
+						}					 	
+					 return 0;
+					}
+				else
+					{/*Неправильное построение оператора инкремент*/
+					 $Code_Error=33;
+					 return 0;
+					}
+				break;		
 
+   /* Обработка оператора присваивания или постинкремента*/
+   /* <идентификатор>:=<выражение> или <идентификатор>++ */
+   
+   case _IDENTIFIER_ :
+					$ires=$Tab_Lexems[$Number_Lexem]->Value;
+					$res=$ArrIdent[$ires];	
                     /* y13:добавить значение лексемы с номером $Number_Lexem */
                     /* в стек $StekIdent ($Tab_Lexems[$Number_Lexem]->Value-->$StekIdent)*/                                       
                     if (!Stek_Integer(2, $StekIdent, $TopIdent,$Tab_Lexems[$Number_Lexem]->Value))
@@ -1820,53 +2408,87 @@
                      /* Переполнение стека $StekIdent */
                      $Code_Error=14;
                      Exit;
-                    }
-
+                    }				
+					
                     /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
                     $Number_Lexem++;
+					
+					if ($Tab_Lexems[$Number_Lexem]->Code==19 && $Tab_Lexems[$Number_Lexem]->Value==2)
+						{ $res=$res+1;
+                    	 if (!Stek_Integer(2, $StekRes, $TopRes,$res))
+                    		{
+                     		 /* Переполнение стека $StekRes */
+                     		 $Code_Error=26;
+                    		 return 0;
+                    		}
+													
+                   		if (!Stek_Integer(1, $StekRes, $TopRes,$res))
+                    		{
+                     		 /* Нехватка элементов в стеке $StekRes */
+                    		 $Code_Error=16;
+                    		 return 0;
+                   			}
+                    	if (!Stek_Integer(1, $StekIdent, $TopIdent, $ires))
+                    		{
+                    		 /* Нехватка элементов в стеке $StekIdent */
+                    		 $Code_Error=17;
+                    		 return 0;
+                    		}							
+						 $ArrIdent[$ires]=$res;
+						 
+						 
+                     		 /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
+                     		 $Number_Lexem++;
+							 
+						return 0;	
+				 
+						}
+						
+					else
+						{
+                    	 if ($Tab_Lexems[$Number_Lexem]->Code==_ASSIGNMENT_)
+                    	 	{
 
-                    if ($Tab_Lexems[$Number_Lexem]->Code==_ASSIGNMENT_)
-                    {
+                     		 /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
+                     		 $Number_Lexem++;
 
-                     /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
-                     $Number_Lexem++;
+                     		 /* Обработка конструкции <выражение> */
+                     		 ProcedureE();
 
-                     /* Обработка конструкции <выражение> */
-                     ProcedureE();
+                     		 /* Проверка на ошибки, появившиеся в процессе            */
+                     		 /* обработки конструкции <выражение>                     */
+                     		 if ($Code_Error!=-1)
+                      			return 0;
 
-                     /* Проверка на ошибки, появившиеся в процессе            */
-                     /* обработки конструкции <выражение>                     */
-                     if ($Code_Error!=-1)
-                      return 0;
+                    		}
+                    	else
+                    		{
+                    		 /* Конструкция <оператор>. Неверное присваивание.*/
+                    		 $Code_Error=15;
+                    		 return 0;
+                    		}
 
-                    }
-                    else
-                    {
-                     /* Конструкция <оператор>. Неверное присваивание.*/
-                     $Code_Error=15;
-                     return 0;
-                    }
-
-                    /* y14: в переменную $Ai снять элемент со стека $StekRes*/
-                    /* ($Ai<--$StekRes), в переменную $Bi снять со стека     */
-                    /* $StekIdent значение лексемы ident ($Bi<--$StekIdent), */
-                    /* идентификатору с номером $Bi, присвоить значение $Ai */
-                    /* $ArrIdent[$Bi]=$Ai                                   */
-                    if (!Stek_Integer(1, $StekRes, $TopRes,$Ai))
-                    {
-                     /* Нехватка элементов в стеке $StekRes */
-                     $Code_Error=16;
-                     return 0;
-                    }
-                    if (!Stek_Integer(1, $StekIdent, $TopIdent, $Bi))
-                    {
-                     /* Нехватка элементов в стеке $StekIdent */
-                     $Code_Error=17;
-                     return 0;
-                    }
-                    $ArrIdent[$Bi]=$Ai;
-
-                   break;
+                    	 /* y14: в переменную $Ai снять элемент со стека $StekRes*/
+                   		 /* ($Ai<--$StekRes), в переменную $Bi снять со стека     */
+                   		 /* $StekIdent значение лексемы ident ($Bi<--$StekIdent), */
+                   		 /* идентификатору с номером $Bi, присвоить значение $Ai */
+                   		 /* $ArrIdent[$Bi]=$Ai                                   */
+                   		 if (!Stek_Integer(1, $StekRes, $TopRes,$Ai))
+                    		{
+                     		 /* Нехватка элементов в стеке $StekRes */
+                    		 $Code_Error=16;
+                    		 return 0;
+                   			}
+                    	if (!Stek_Integer(1, $StekIdent, $TopIdent, $Bi))
+                    		{
+                    		 /* Нехватка элементов в стеке $StekIdent */
+                    		 $Code_Error=17;
+                    		 return 0;
+                    		}
+                    	 $ArrIdent[$Bi]=$Ai;
+						}
+						
+                   break; 				   
 
    case _OUTPUT_ :
 
@@ -2142,7 +2764,192 @@
                       }
 
                     break;
+					
+				   
+ 
+   case _SWITCH_:
+   
+							 $cvalsw=$Number_Lexem;
+							 
+							 /* функция y7: $Number_Lexem++, */
+                             /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             $Number_Lexem++;			  				
+			  				
+							if ($Tab_Lexems[$Number_Lexem]->Code!=_LPAREN_)
+									{
+								     /* ошибка в построении оператора SWITCH*/
+                              		 $Code_Error=41;
+                                     return 0;
+									}
+									
+							 /* функция y7: $Number_Lexem++, */
+                             /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             $Number_Lexem++;
+							 
+							 ProcedureE();	
+							 
+							 if (!Stek_Integer(1, $StekRes, $TopRes, $Ai))
+   								{
+   								 /* Нехватка элементов в стеке $StekRes */
+   								 $Code_Error=16;
+   								 return 0;
+   								}
+										
+							if($Tab_Lexems[$Number_Lexem]->Code!=_RPAREN_)
+								{/* ошибка в построении оператора SWITCH*/
+                             	 $Code_Error=42;
+                             	 return 0;
+								}
+							
+							 /* функция y7: $Number_Lexem++, */
+                             /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             $Number_Lexem++;			  				
+			  				
+							if ($Tab_Lexems[$Number_Lexem]->Code!=_LBRACE_)
+									{
+								     /* ошибка в построении оператора SWITCH*/
+                              		 $Code_Error=41;
+                                     return 0;
+									}
+									
+							if ($Tab_Lexems[$Number_Lexem+1]->Code!=_CASE_)
+									{
+								     /* ошибка в построении оператора SWITCH*/
+                              		 $Code_Error=38;
+                                     return 0;
+									}			
+															
+							/* функция y7: $Number_Lexem++, */
+                             /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             $Number_Lexem++;
+							 while($Tab_Lexems[$Number_Lexem-1]->Code!=_RBRACE_)
+							 	{if($Tab_Lexems[$Number_Lexem]->Code==_CASE_) 
+												{	$cvalcase=$Number_Lexem;
+												 /* функция y7: $Number_Lexem++, */
+                            					 /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             					 $Number_Lexem++;
+												 
+												 ProcedureP ();
+												 
+												 if (!Stek_Integer(1, $StekRes, $TopRes, $Bi))
+   													{
+   													 /* Нехватка элементов в стеке $StekRes */
+   													 $Code_Error=16;
+   													 return 0;
+   													}
+												 if ($Tab_Lexems[$Number_Lexem]->Code!=_TWODOTS_)
+													{
+								    				 /* ошибка в построении оператора SWITCH*/
+                              						 $Code_Error=44;
+                                    				 return 0;
+													}
+												if($Ai==$Bi)
+														{$res++;
+													     /* функция y7: $Number_Lexem++, */
+                            					         /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             					         $Number_Lexem++;
+														 if ($Tab_Lexems[$Number_Lexem]->Code==_CASE_)
+									{
+								     /* ошибка в построении оператора SWITCH*/
+                              		 $Code_Error=46;
+                                     return 0;
+									}
+														 ProcedureL();
+														 $Number_Lexem=$Tab_Lexems[$cvalsw]->Value;
+														 continue;	
+														 
+														}
+												if($Ai!=$Bi)			
+														{$Number_Lexem=$Tab_Lexems[$cvalcase]->Value;
+														 continue;
+														}
+											}			
+	
+								if($Tab_Lexems[$Number_Lexem]->Code==_DEFAULT_)	
+	
+												
+											{/* функция y7: $Number_Lexem++, */
+                            					         /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             					         $Number_Lexem++;
+											
+											/* функция y7: $Number_Lexem++, */
+                            					         /* прочитать очередную лексему с номером  $Number_Lexem */  
+                             					         $Number_Lexem++;			 
+											ProcedureL();
+											 $Number_Lexem=$Tab_Lexems[$cvalsw]->Value;
+											 continue;												 
+											}
+											else {$Code_Error=43;
+                                    				 return 0;}
+							}				
+	
+	break;							
+					
+	Case _REPEAT_:
+				$cvalrep=$Tab_Lexems[$Number_Lexem]->Value;
+                		 /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
+               			  $Number_Lexem++;					
+				while(TRUE)
+						{						
+						/* Обработка конструкции           */
+                         /* <последовательность операторов> */
+                         ProcedureL();
 
+                         /* Проверка на ошибки, появившиеся в процессе   */
+                         /* обработки конструкции                        */
+                         /* <последовательность операторов>              */
+                         if ($Code_Error!=-1)
+                         	return 0;
+
+			  				if ($Tab_Lexems[$Number_Lexem]->Code==_UNTIL_)
+                          		{$cvalunt=$Tab_Lexems[$Number_Lexem]->Value;
+
+                           	 	 /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
+                           		 $Number_Lexem++;
+
+		                         /* Обработка конструкции <условие> */
+                            		 ProcedureB();
+
+		                         /* Проверка на ошибки, появившиеся в процессе   */
+                 		         /* обработки конструкции <условие>              */
+                        		 if ($Code_Error!=-1)
+                             			return 0;
+                     /* y18: в переменную $Ai снять элемент со стека $StekRes */
+                     /* ($Ai<--$StekRes), если $Ai=1, то это истина,           */
+                     /* иначе - ложь                                        */
+                     if (!Stek_Integer(1, $StekRes, $TopRes, $Ai))
+                     {
+                      /* Нехватка элементов в стеке $StekRes */
+                      $Code_Error=16;
+                      return 0;
+                     }										
+                            	 if($Ai==1) /*обработка TRuE*/
+									{/* y17: перейти на лексему номер       */
+                        		 	 /* $Tab_Lexems[$Number_Lexem]->Value      */
+                       			 	 $Number_Lexem=$cvalunt;
+                       			 	 continue;
+									}
+					 			 else /* обработка FALSE*/
+									{ /* перейти на лексему номер $Tab_Lexems[$Number_Lexem]->Value  */
+  
+  	  	             			 	 $Number_Lexem=$cvalrep;
+									 
+                       			  	 return 0;
+									}
+                          		
+							}
+                   
+			 else
+                       	{
+                         /* Конструкция <оператор>. */
+                         /* Отсутствует UNTIL в операторе REPEAT*/
+                         $Code_Error=40;
+                         return 0;
+                       	}
+           }	
+		   return 0;		
+			break;
+  
   endswitch;
   return 0;
 } /* End ProcdureS */
@@ -2172,6 +2979,10 @@
       return 0;
 
     /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
+    $Number_Lexem++;
+	
+	    if ($Tab_Lexems[$Number_Lexem]->Code==_BRCOM_)
+			   /* функция y4: чтение следующей лексемы ($Number_Lexem++) */
     $Number_Lexem++;
 
    endwhile;

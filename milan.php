@@ -16,7 +16,7 @@ require("interpretator.php");
            $tmp= $_POST["readbuf"];              //получим данные из скрытого поля с именем "readbuf"
             if($tmp!='')                         //если строка не пустая
             {
-               $ct_readBUF = explode('%',$tmp);    //разбиваем строку на элементы разделённые символом '%' и заносим в массив
+               $ct_readBUF = split('%',$tmp);    //разбиваем строку на элементы разделённые символом '%' и заносим в массив
             }
             $ct_readBUF[]=$_POST["stdin"];       //добавим новое прочитанное число из поля "stdin"  в массив $ct_readBUF
             
@@ -57,8 +57,8 @@ require("interpretator.php");
  //восстановим Таблицу лексем, используя данные скрытых полей формы: "lex_code" и "lex_value"
     $ct_TabLEX_Code_str   = $_POST["lex_code"];  //получим строковые данные, сохранённые в скрытом поле "lex_code"
     $ct_TabLEX_Value_str  = $_POST["lex_value"]; //получим строковые данные, сохранённые в скрытом поле "lex_value"  
-    $ct_tmpcode =  explode('%',$ct_TabLEX_Code_str);  //преобразуем строку $ct_TabLEX_Code_str в массив $ct_tmpcode
-    $ct_tmpvalue = explode('%',$ct_TabLEX_Value_str); //преобразуем строку $ct_TabLEX_Value_str в массив $ct_tmpvalue
+    $ct_tmpcode =  split('%',$ct_TabLEX_Code_str);  //преобразуем строку $ct_TabLEX_Code_str в массив $ct_tmpcode
+    $ct_tmpvalue = split('%',$ct_TabLEX_Value_str); //преобразуем строку $ct_TabLEX_Value_str в массив $ct_tmpvalue
     
     for ($i=0;$i<count($ct_tmpcode)-1;$i++ ) 
      {
@@ -68,10 +68,10 @@ require("interpretator.php");
         $Tab_Lexems[$i+1] = $tmp;
      }
      //востановление таблицы идентификаторов
-    $Tab_Identifiers = explode('%','%'.$_POST["tab_ident"]);       
+    $Tab_Identifiers = split('%','%'.$_POST["tab_ident"]);       
     unset($Tab_Identifiers[0]); //удалить нулевой элемент массива
     //востановление таблицы констант
-    $Tab_Constants   = explode('%','%'.$_POST["tab_const"]); 
+    $Tab_Constants   = split('%','%'.$_POST["tab_const"]); 
     unset($Tab_Constants[0]);  //удалить нулевой элемент массива 
  }
  /* Проверка на ошибки, появившиеся в процессе лексического анализа */
